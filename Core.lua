@@ -2,7 +2,7 @@ local addonName, addon = ...
 
 local addonTitle = C_AddOns.GetAddOnMetadata(addonName, "Title")
 
-local SharedMedia = LibStub("LibSharedMedia-3.0")
+local LSM = LibStub("LibSharedMedia-3.0")
 
 local AceAddon = LibStub("AceAddon-3.0")
 local AceConfig = LibStub("AceConfig-3.0")
@@ -34,7 +34,7 @@ local defaults = {
             show = true,
             font = "Friz Quadrata TT",
             fontSize = 14,
-            fontOutline = false,
+            fontOutline = true,
             fontColor = { r = 1, g = 1, b = 1, a = 1 },
             point = "TOPRIGHT",
             X = -4,
@@ -173,7 +173,7 @@ function addon:SetupOptions()
                                 type = "range",
                                 name = " Border Thickness",
                                 desc = "Change the thickness of the icon border",
-                                min = 0, max = 5, step = 1,
+                                min = 0, max = 10, step = 1,
                                 get = function() return addon.db.profile.border.thickness end,
                                 set = function(_, val)
                                     addon.db.profile.border.thickness = val
@@ -292,15 +292,8 @@ function addon:SetupOptions()
                                 type = "select",
                                 name = "Font",
                                 desc = "Choose the font used for the keybind text",
-                                values = function()
-                                    local fonts = {
-                                        --["2002 Bold"] = "2002 Bold",
-                                        ["AR ZhongkaiGBK Medium"] = "AR ZhongkaiGBK Medium",
-                                        ["Arial Narrow"] = "Arial Narrow",
-                                        ["Friz Quadrata TT"] = "Friz Quadrata TT",
-                                    } -- LibSharedMedia fonts don't work *shrug*
-                                    return fonts
-                                end,
+                                dialogControl = "LSM30_Font", 
+                                values = LSM:HashTable(LSM.MediaType.FONT),
                                 get = function() return addon.db.profile.Keybind.font end,
                                 set = function(_, val)
                                     addon.db.profile.Keybind.font = val

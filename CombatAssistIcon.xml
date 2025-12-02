@@ -5,35 +5,20 @@
 	<Script file="CombatAssistIcon.lua"/>
 
     <Frame name="AssistedCombatIconFrame" inherits="BackdropTemplate" mixin="AssistedCombatIconMixin" parent="UIParent" movable="true" enableMouse="true" clampedToScreen="true" hidden="false">
-        <Size x="40" y="40"/>
         <Anchors>
             <Anchor point="CENTER"/>
         </Anchors>
         <Layers>
             <Layer level="ARTWORK">
-                <Texture parentKey="Icon" setAllPoints="true">
-                    <Anchors>
-                        <Anchor point="TOPLEFT" x="1" y="-1"/>
-                        <Anchor point="BOTTOMRIGHT" x="-1" y="1"/>
-                    </Anchors>
-                    <TexCoords left="0.06" right="0.94" top="0.06" bottom="0.94"/>
-                </Texture>
+                <Texture parentKey="Icon" setAllPoints="true" />
             </Layer>
             <Layer level="OVERLAY">
-                <FontString parentKey="Keybind" inherits="NumberFontNormalSmall" justifyH="RIGHT">
-                    <Anchors>
-                        <Anchor point="TOPRIGHT" x="-4" y="-4"/>
-                    </Anchors>
-                </FontString>
+                <FontString parentKey="Keybind" inherits="NumberFontNormalSmall" justifyH="RIGHT" />
             </Layer>
         </Layers>
         <Frames>
-            <Cooldown parentKey="Cooldown" enableMouse="false" inherits="CooldownFrameTemplate">
-                <Anchors>
-                    <Anchor point="TOPLEFT"/>
-                    <Anchor point="BOTTOMRIGHT"/>
-                </Anchors>
-            </Cooldown>
+            <Frame parentKey="Overlay" enableMouse="false" setAllPoints="true" />
+            <Cooldown parentKey="Cooldown" enableMouse="false" inherits="CooldownFrameTemplate" setAllPoints="true" />
         </Frames>
         <Scripts>
             <OnLoad method="OnLoad"/>

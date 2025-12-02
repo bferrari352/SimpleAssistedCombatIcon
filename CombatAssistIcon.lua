@@ -153,6 +153,7 @@ function AssistedCombatIconMixin:OnLoad()
     self.combatUpdateInterval = C_CVar.GetCVar("assistedCombatIconUpdateRate") or 0.3
     self.updateInterval = 1
 
+    self.Keybind:SetParent(self.Overlay)
     self:SetAttribute("ignoreFramePositionManager", true)
 
     for _, spellID in ipairs(C_AssistedCombat.GetRotationSpells()) do
@@ -162,7 +163,6 @@ function AssistedCombatIconMixin:OnLoad()
     end
 
     if Masque then
-
         self:SetBackdrop({
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 0,
@@ -228,14 +228,6 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
             self.combatUpdateInterval = tonumber(arg2) or self.combatUpdateInterval
         end
     end
-end
-
-function AssistedCombatIconMixin:OnShow()
-    self:SetScript("OnUpdate", self.OnUpdate)
-end
-
-function AssistedCombatIconMixin:OnHide()
-    self:SetScript("OnUpdate", nil)
 end
 
 function AssistedCombatIconMixin:OnUpdate()
@@ -317,6 +309,7 @@ function AssistedCombatIconMixin:ApplyOptions()
     self:Raise()
 
     local kb = db.Keybind
+
     self.Keybind:ClearAllPoints()
     self.Keybind:SetPoint(kb.point, self, kb.point, kb.X, kb.Y)
     self.Keybind:SetTextColor(kb.fontColor.r, kb.fontColor.g, kb.fontColor.b, kb.fontColor.a)
@@ -327,6 +320,9 @@ function AssistedCombatIconMixin:ApplyOptions()
         self.Icon:SetPoint("TOPLEFT", border.thickness, -border.thickness)
         self.Icon:SetPoint("BOTTOMRIGHT", -border.thickness, border.thickness)
         self.Icon:SetTexCoord(0.06,0.94,0.06,0.94)
+
+        self.Cooldown:SetPoint("TOPLEFT", border.thickness, -border.thickness)
+        self.Cooldown:SetPoint("BOTTOMRIGHT", -border.thickness, border.thickness)
 
         self:SetBackdrop({
             edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -358,13 +354,13 @@ function AssistedCombatIconMixin:UpdateCooldown()
     if spellID == 375982 then --Temporary workaround for Primoridal Storm
         spellID = FindSpellOverrideByID(spellID)
     end
+
     local cdInfo = C_Spell.GetSpellCooldown(spellID)
 
     if cdInfo then
         self.Cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL
         self.Cooldown:SetEdgeTexture("Interface\\Cooldown\\UI-HUD-ActionBar-SecondaryCooldown")
         self.Cooldown:SetSwipeColor(0, 0, 0)
-        self.Cooldown:SetDrawEdge(false)
         self.Cooldown:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
     else
         self.Cooldown:Clear()
