@@ -11,4 +11,6 @@
 	<Include file="AceConfig-3.0\AceConfig-3.0.xml"/>
 	<Include file="AceConsole-3.0\AceConsole-3.0.xml"/>
 	
+	<Script file="AceGUI-3.0\widgets\prototypes.lua"/>
+	<Script file="AceGUI-3.0\widgets\FontWidget.lua"/>
 </Ui>

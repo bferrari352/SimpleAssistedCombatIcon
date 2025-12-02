@@ -8,8 +8,6 @@
 ## Version: 11.2.7.9
 ## SavedVariables: SCAIDB
 
-Debug.lua
-
 Libs\Ace3.xml
 Libs\LibSharedMedia.xml
 
