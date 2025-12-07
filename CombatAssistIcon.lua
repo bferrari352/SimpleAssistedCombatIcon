@@ -58,7 +58,8 @@ local frameStrata = {
 }
 
 local function IsRelevantAction(actionType, subType)
-    return (actionType == "spell" and subType ~= "assistedcombat")
+    return (actionType == "macro" and subType == "spell")
+        or (actionType == "spell" and subType ~= "assistedcombat")
 end
 
 local function GetBindingForAction(action)
@@ -76,6 +77,15 @@ local function GetBindingForAction(action)
     return text
 end
 
+function GetButtonFrameByAction(action)
+    if not action then return nil end
+
+    local buttonName = LookupButtonByAction[action]
+    if not buttonName then return nil end
+
+    return _G[buttonName]
+end
+
 local function GetKeyBindForSpellID(spellID)
     local baseSpellID = FindBaseSpellByID(spellID)
 
@@ -86,9 +96,8 @@ local function GetKeyBindForSpellID(spellID)
         local actionType, _, subType = GetActionInfo(slot)
         if IsRelevantAction(actionType, subType) then
             local action = LookupActionBySlot[slot]
-            local buttonName = LookupButtonByAction[action]
-            local button = _G[buttonName]
-            if button and button.action == slot then
+            local buttonFrame = GetButtonFrameByAction(action)
+            if buttonFrame and buttonFrame.action == slot then
                 local text = GetBindingForAction(action)
                 if text then 
                     return text
