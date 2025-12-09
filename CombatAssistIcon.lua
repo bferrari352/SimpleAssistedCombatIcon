@@ -71,7 +71,7 @@ local function GetBindingForAction(action)
     local key = GetBindingKey(action)
     if not key then return nil end
 
-    local text = GetBindingText(key, "KEY_")
+    local text = GetBindingText(key)
     if not text or text == "" then return nil end
 
     text = text:gsub("Mouse Button ", "MB", 1)

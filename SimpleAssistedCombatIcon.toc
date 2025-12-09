@@ -8,8 +8,9 @@
 ## Version: 11.2.7.12
 ## SavedVariables: SCAIDB
 
-Libs\Ace3.xml
+Libs\LibStub\LibStub.lua
 Libs\LibSharedMedia.xml
+Libs\Ace3.xml
 
 Core.lua
 CombatAssistIcon.xml
