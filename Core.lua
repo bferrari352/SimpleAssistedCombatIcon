@@ -16,6 +16,10 @@ local defaults = {
         locked = false,
         showCooldownSwipe = true,
         displayMode = "ALWAYS",
+        display = {
+            HideInVehicle = false,
+            HideInHealerRole = false,
+        },
         iconSize = 48,
         border = {
             show = true,
@@ -51,6 +55,9 @@ function addon:OnInitialize()
 end
 
 function addon:SetupOptions()
+    local profileOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(addon.db)
+    profileOptions.inline = false
+
     local options = {
         type = "group",
         name = addonTitle,
@@ -122,67 +129,107 @@ function addon:SetupOptions()
                         inline = true,
                         order = 1,
                         args = {
-                            displayMode = {
-                                name = "Display Mode",
-                                desc = "Choose when the icon should be shown",
-                                type = "select",
-                                style = "dropdown",
-                                values = {
-                                    ALWAYS = "Always",
-                                    IN_COMBAT = "In Combat",
-                                    HOSTILE_TARGET = "Enemy Target",
-                                },
-                                get = function(info) return addon.db.profile.displayMode end,
-                                set = function(_, val)
-                                    addon.db.profile.displayMode = val
-                                    AssistedCombatIconFrame:ApplyOptions()
-                                end,
+                            grp = {
+                                type = "group",
+                                name = "",
+                                inline = true,
                                 order = 1,
-                                width = 0.66,
+                                args = {
+                                    displayMode = {
+                                        name = "Display Mode",
+                                        desc = "Choose when the icon should be shown",
+                                        type = "select",
+                                        style = "dropdown",
+                                        values = {
+                                            ALWAYS = "Always",
+                                            IN_COMBAT = "In Combat",
+                                            HOSTILE_TARGET = "Enemy Target",
+                                        },
+                                        get = function(info) return addon.db.profile.displayMode end,
+                                        set = function(_, val)
+                                            addon.db.profile.displayMode = val
+                                            AssistedCombatIconFrame:ApplyOptions()
+                                        end,
+                                        order = 1,
+                                        width = 0.66,
+                                    },
+                                    displayVehicle = {
+                                        name = "Hide in Vehicle",
+                                        desc = "Should the icon show or hide while in a vehicle",
+                                        type = "toggle",
+                                        get = function(info) return addon.db.profile.display.HideInVehicle end,
+                                        set = function(_, val)
+                                            addon.db.profile.display.HideInVehicle = val
+                                            AssistedCombatIconFrame:ApplyOptions()
+                                        end,
+                                        order = 2,
+                                        width = "normal",
+                                    },
+                                    displayHealer = {
+                                        name = "Hide in Healer Role",
+                                        desc = "Should the icon show or hide while in a group as a healer",
+                                        type = "toggle",
+                                        get = function(info) return addon.db.profile.display.HideInHealerRole end,
+                                        set = function(_, val)
+                                            addon.db.profile.display.HideInHealerRole = val
+                                            AssistedCombatIconFrame:ApplyOptions()
+                                        end,
+                                        order = 3,
+                                        width = "normal",
+                                    },
+                                },
                             },
-                            iconSize = {
-                                type = "range",
-                                name = "Icon Size",
-                                desc = "Set the size of the icon",
-                                min = 20, max = 300, step = 1,
-                                get = function() return addon.db.profile.iconSize end,
-                                set = function(_, val)
-                                    addon.db.profile.iconSize = val
-                                    AssistedCombatIconFrame:ApplyOptions()
-                                end,
+                            grp2 = {
+                                type = "group",
+                                name = "",
+                                inline = true,
                                 order = 2,
-                                width = "normal",
+                                args = {
+                                    iconSize = {
+                                        type = "range",
+                                        name = "Icon Size",
+                                        desc = "Set the size of the icon",
+                                        min = 20, max = 300, step = 1,
+                                        get = function() return addon.db.profile.iconSize end,
+                                        set = function(_, val)
+                                            addon.db.profile.iconSize = val
+                                            AssistedCombatIconFrame:ApplyOptions()
+                                        end,
+                                        order = 2,
+                                        width = "normal",
+                                    },
+                                    borderColor = {
+                                        type = "color",
+                                        name = " Border Color",
+                                        desc = "Change the text color of the border",
+                                        hasAlpha = false,
+                                        get = function()
+                                            local c = addon.db.profile.border.color
+                                            return c.r, c.g, c.b
+                                        end,
+                                        set = function(_, r, g, b, a)
+                                            addon.db.profile.border.color = { r = r, g = g, b = b }
+                                            AssistedCombatIconFrame:ApplyOptions()
+                                        end,
+                                        order = 4,
+                                        width = 0.66,
+                                    },
+                                    borderThickness = {
+                                        type = "range",
+                                        name = " Border Thickness",
+                                        desc = "Change the thickness of the icon border",
+                                        min = 0, max = 10, step = 1,
+                                        get = function() return addon.db.profile.border.thickness end,
+                                        set = function(_, val)
+                                            addon.db.profile.border.thickness = val
+                                            AssistedCombatIconFrame:ApplyOptions()
+                                        end,
+                                        order = 5,
+                                        width = 0.66,
+                                    },
+                                },
                             },
-                            borderColor = {
-                                type = "color",
-                                name = " Border Color",
-                                desc = "Change the text color of the border",
-                                hasAlpha = false,
-                                get = function()
-                                    local c = addon.db.profile.border.color
-                                    return c.r, c.g, c.b
-                                end,
-                                set = function(_, r, g, b, a)
-                                    addon.db.profile.border.color = { r = r, g = g, b = b }
-                                    AssistedCombatIconFrame:ApplyOptions()
-                                end,
-                                order = 4,
-                                width = 0.66,
-                            },
-                            borderThickness = {
-                                type = "range",
-                                name = " Border Thickness",
-                                desc = "Change the thickness of the icon border",
-                                min = 0, max = 10, step = 1,
-                                get = function() return addon.db.profile.border.thickness end,
-                                set = function(_, val)
-                                    addon.db.profile.border.thickness = val
-                                    AssistedCombatIconFrame:ApplyOptions()
-                                end,
-                                order = 5,
-                                width = 0.66,
-                            },
-                        }
+                        },
                     },
                     positionGroup = {
                         type = "group",
@@ -406,12 +453,13 @@ function addon:SetupOptions()
                     },
                 },
             },
+            profiles = profileOptions
         },
     }
 
-    LibStub("AceConfig-3.0"):RegisterOptionsTable(addonName, options)
-    LibStub("AceConfigDialog-3.0"):AddToBlizOptions(addonName, addonTitle)    
-    
+    AceConfig:RegisterOptionsTable(addonName, options)
+    AceConfigDialog:AddToBlizOptions(addonName, addonTitle)
+
     self:RegisterChatCommand("saci", "OpenConfig")
     
     AddonCompartmentFrame:RegisterAddon({

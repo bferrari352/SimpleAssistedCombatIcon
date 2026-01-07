@@ -25,7 +25,6 @@ local LookupButtonByAction = {}
 
 local DefaultActionSlotMap = {
     --Default UI Slot mapping https://warcraft.wiki.gg/wiki/Action_slot
-    --Eventually will look at making sure other addons work...
     { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 1,  last = 12},--Action Bar 1 (Main Bar)
     { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 13, last = 24},--Action Bar 1 (Page 2)
     { actionPrefix = "MULTIACTIONBAR3BUTTON", buttonPrefix ="MultiBarRightButton",      start = 25, last = 36},--Action Bar 4 (Right)
@@ -71,7 +70,7 @@ local function GetBindingForAction(action)
     local key = GetBindingKey(action)
     if not key then return nil end
 
-    local text = GetBindingText(key)
+    local text = GetBindingText(key,"KEY_")
     if not text or text == "" then return nil end
 
     text = text:gsub("Mouse Button ", "MB", 1)
@@ -165,6 +164,13 @@ function AssistedCombatIconMixin:OnLoad()
     self:RegisterEvent("PLAYER_TARGET_CHANGED")
     self:RegisterEvent("CVAR_UPDATE")
 
+    self:RegisterEvent("ROLE_CHANGED_INFORM")
+    self:RegisterEvent("GROUP_ROSTER_UPDATE")
+    self:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+
+    self:RegisterEvent("UNIT_ENTERED_VEHICLE")
+    self:RegisterEvent("UNIT_EXITED_VEHICLE")
+
     self:RegisterForDrag("LeftButton")
 
     self.spellID = 61304
@@ -173,7 +179,6 @@ function AssistedCombatIconMixin:OnLoad()
     self.updateInterval = 1
 
     self.Keybind:SetParent(self.Overlay)
-    self:SetAttribute("ignoreFramePositionManager", true)
 
     if Masque then
         self:SetBackdrop({
@@ -207,7 +212,6 @@ end
 function AssistedCombatIconMixin:OnAddonLoaded()
     --C_CVar.SetCVar("assistedCombatIconUpdateRate",0.25)
     self.db = addon.db.profile
-    self:ApplyOptions()
 end
 
 function AssistedCombatIconMixin:OnEvent(event, ...)
@@ -217,15 +221,23 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
         local spellID, inRange, checksRange = ...
         if spellID ~= self.spellID then return end
         self.spellOutOfRange = checksRange == true and inRange == false
-        --self:Update()
     elseif event == "PLAYER_REGEN_ENABLED" and self.db.displayMode == "IN_COMBAT" then
         self:SetShown(false)
     elseif event == "PLAYER_REGEN_DISABLED" and self.db.displayMode == "IN_COMBAT" then
         self:SetShown(true)
     elseif event == "PLAYER_TARGET_CHANGED" and self.db.displayMode == "HOSTILE_TARGET" then
         self:SetShown(UnitExists("target") and UnitCanAttack("player", "target"))
+    elseif (event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ROLE_CHANGED_INFORM") and self.db.display.HideInHealerRole then
+        local role = UnitGroupRolesAssigned("player")
+        self:SetShown(not (role == "HEALER"))
+    elseif (event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE") and self.db.display.HideInVehicle then
+        local unit = ...
+        if unit == "player" then 
+            self:SetShown(not UnitInVehicle("player"))
+        end
     elseif event == "PLAYER_LOGIN" then
         LoadActionSlotMap()
+        self:ApplyOptions()
     elseif event == "CVAR_UPDATE" then 
         local arg1, arg2 = ...
         if arg1 =="assistedCombatIconUpdateRate" then
@@ -337,7 +349,11 @@ function AssistedCombatIconMixin:ApplyOptions()
         db.displayMode == "ALWAYS" or
         (db.displayMode == "HOSTILE_TARGET" and UnitCanAttack("player", "target")) or
         (db.displayMode == "IN_COMBAT" and InCombatLockdown())
-    self:SetShown(show)
+
+    local isHealer = (db.display.HideInHealerRole and (UnitGroupRolesAssigned("player") == "HEALER"))
+    local inVehicle = (db.display.HideInVehicle and UnitInVehicle("player"))
+    
+    self:SetShown(show and not inVehicle and not isHealer)
 
     self:Update()
 end
