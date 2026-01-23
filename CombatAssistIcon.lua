@@ -42,6 +42,18 @@ local DefaultActionSlotMap = {
     { actionPrefix = "MULTIACTIONBAR5BUTTON", buttonPrefix ="MultiBar5Button",          start = 145,last = 156},--Action Bar 6
     { actionPrefix = "MULTIACTIONBAR6BUTTON", buttonPrefix ="MultiBar6Button",          start = 157,last = 168},--Action Bar 7
     { actionPrefix = "MULTIACTIONBAR7BUTTON", buttonPrefix ="MultiBar7Button",          start = 169,last = 180},--Action Bar 8
+    { actionPrefix = "SHAPESHIFTBUTTON",      buttonPrefix ="StanceButton",             start = 901,last = 907},--Stance Bar. Dummy slots
+}
+
+local BartenderActionSlotMap = {
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 1,  last = 72}, --Action Bars
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 73, last = 84}, --Class Bar 1
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 85, last = 96}, --Class Bar 2
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 97, last = 108},--Class Bar 3
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 109,last = 120},--Class Bar 4
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 121,last = 132},--(Skyriding)
+    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start = 145, start = 145,last = 180},
+    { actionPattern = "CLICK %s%s:LeftButton", buttonPrefix ="BT4StanceButton", id_start = 1, start = 901,last = 907}, --Stance Bar. Dummy slots
 }
 
 local Colors = {
@@ -82,9 +94,10 @@ local bindingOverrides = {
 }
 
 
-local function IsRelevantAction(actionType, subType)
+local function IsRelevantAction(actionType, subType, slot)
     return (actionType == "macro" and subType == "spell")
         or (actionType == "spell" and subType ~= "assistedcombat")
+        or (slot > 900)
 end
 
 local function GetBindingForAction(action)
@@ -105,70 +118,68 @@ local function GetBindingForAction(action)
     return text
 end
 
-local function GetButtonFrameBySlot(slot)
-    if HasBartender then
-        for i = 1, 12 do
-            local btn = _G["BT4Button" .. i]
-            if btn and btn:GetAttribute("action") == slot then
-                return btn
-            end
+local function GetStanceSlotBySpellID(spellID)
+    local numForms = GetNumShapeshiftForms() or 0
+    for i = 1, numForms do
+        local _, _, _, formID = GetShapeshiftFormInfo(i)
+        if formID == spellID then
+            return {i + 900}
         end
     end
+
+    return nil
 end
 
-local function GetButtonFrameByAction(addonAction, defaultAction, slot)
+local function GetButtonFrameByAction(addonAction, defaultAction)
     local buttonName
 
     if BarAddonLoaded and addonAction then
         buttonName = AddonLookupButtonByAction[addonAction]
-        if buttonName and _G[buttonName] then
-            return _G[buttonName]
-        else
-            local btn = GetButtonFrameBySlot(slot)
-            if btn then return btn end
-        end
+    else
+        buttonName = LookupButtonByAction[defaultAction]
     end
 
-    buttonName = LookupButtonByAction[defaultAction]
     return _G[buttonName]
+end
+
+local function GetBindingForSlots(slots, spellID)
+    if not slots then return end
+
+    for _, slot in ipairs(slots) do
+        local actionType, _, subType = GetActionInfo(slot)
+        if IsRelevantAction(actionType, subType, slot) then
+            
+            local defaultAction = LookupActionBySlot[slot]
+            local addonAction = BarAddonLoaded and AddonLookupActionBySlot[slot]
+
+            local buttonFrame = GetButtonFrameByAction(addonAction, defaultAction) 
+            
+            local text = BarAddonLoaded and GetBindingForAction(addonAction)
+            
+            if not text then 
+                text = GetBindingForAction(defaultAction)
+            end 
+
+            if buttonFrame and (slot > 900 or
+               buttonFrame.action == slot) and text then
+                return text
+            end
+        end
+    end
 end
 
 local function GetKeyBindForSpellID(spellID)
     local baseSpellID = FindBaseSpellByID(spellID)
 
     local slots = C_ActionBar.FindSpellActionButtons(baseSpellID)
-    if not slots then return end
+    
+    local text = GetBindingForSlots(slots, spellID)
+    if text then return text end
+    
+    slots = GetStanceSlotBySpellID(spellID)
 
-    for _, slot in ipairs(slots) do
-        local actionType, _, subType = GetActionInfo(slot)
-        if IsRelevantAction(actionType, subType) then
-            
-            local defaultAction = LookupActionBySlot[slot]
-            local addonAction = BarAddonLoaded and AddonLookupActionBySlot[slot]
-
-            local buttonFrame = GetButtonFrameByAction(addonAction, defaultAction, slot) 
-            
-            local text = BarAddonLoaded and GetBindingForAction(addonAction) 
-            
-            if BarAddonLoaded and not text then 
-                if HasBartender then 
-                    addonAction = "CLICK "..buttonFrame:GetName()..":Keybind" 
-                elseif HasDominos then 
-                    addonAction = "CLICK "..buttonFrame:GetName()..":HOTKEY" 
-                end 
-                
-                text = GetBindingForAction(addonAction) 
-            end 
-            
-            if not text then 
-                text = GetBindingForAction(defaultAction)
-            end 
-
-            if buttonFrame and buttonFrame.action == slot and text then
-                return text
-            end
-        end
-    end
+    text = GetBindingForSlots(slots, spellID)
+    if text then return text end
 end
 
 local function HideLikelyMasqueRegions(frame)
@@ -188,9 +199,17 @@ local function LoadActionSlotMap()
         end
         HasDominos  = true
     elseif C_AddOns.IsAddOnLoaded("Bartender4") then
-        for slot = 1, 180 do
-            AddonLookupActionBySlot[slot] = "CLICK BT4Button"..slot..":Keybind"
-            AddonLookupButtonByAction[AddonLookupActionBySlot[slot]] = "BT4Button"..slot
+        for _, info in ipairs(BartenderActionSlotMap) do
+            local id = info.id_start
+            for slot = info.start, info.last do
+                local t = id
+                if _G[info.buttonPrefix..slot] then 
+                    t = slot
+                end
+                AddonLookupActionBySlot[slot] = info.actionPattern:format(info.buttonPrefix,t)
+                AddonLookupButtonByAction[AddonLookupActionBySlot[slot]] = info.buttonPrefix..t
+                id = id + 1
+            end
         end
         HasBartender = true
     end
@@ -198,10 +217,10 @@ local function LoadActionSlotMap()
     BarAddonLoaded = HasBartender or HasDominos
 
     for _, info in ipairs(DefaultActionSlotMap) do
-        for id = info.start, info.last do
-            local index = id - info.start + 1
-            LookupActionBySlot[id] = info.actionPrefix .. index
-            LookupButtonByAction[LookupActionBySlot[id]] = info.buttonPrefix .. index
+        for slot = info.start, info.last do
+            local index = slot - info.start + 1
+            LookupActionBySlot[slot] = info.actionPrefix .. index
+            LookupButtonByAction[LookupActionBySlot[slot]] = info.buttonPrefix .. index
         end
     end
 end
@@ -274,23 +293,30 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
         local spellID, inRange, checksRange = ...
         if spellID ~= self.spellID then return end
         self.spellOutOfRange = checksRange == true and inRange == false
-    elseif event == "PLAYER_REGEN_ENABLED" and self.db.displayMode == "IN_COMBAT" then
-        self:SetShown(false)
-    elseif event == "PLAYER_REGEN_DISABLED" and self.db.displayMode == "IN_COMBAT" then
-        self:SetShown(true)
-    elseif event == "PLAYER_TARGET_CHANGED" and self.db.displayMode == "HOSTILE_TARGET" then
-        self:SetShown(UnitExists("target") and UnitCanAttack("player", "target"))
-    elseif (event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ROLE_CHANGED_INFORM") and self.db.display.HideInHealerRole then
-        local role = UnitGroupRolesAssigned("player")
-        self:SetShown(not (role == "HEALER"))
+    elseif event == "PLAYER_REGEN_ENABLED" and self.db.display.IN_COMBAT then
+        self:UpdateVisibility()
+        self:Update()
+    elseif event == "PLAYER_REGEN_DISABLED" and self.db.display.IN_COMBAT then
+        self:UpdateVisibility()
+        self:Update()
+    elseif event == "PLAYER_TARGET_CHANGED" and self.db.display.HOSTILE_TARGET then
+        self:UpdateVisibility()
+        self:Update()
+    elseif (event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ROLE_CHANGED_INFORM") and self.db.display.HideAsHealer then
+        self:UpdateVisibility()
+        self:Update()
     elseif (event == "UNIT_ENTERED_VEHICLE" or event == "UNIT_EXITED_VEHICLE") and self.db.display.HideInVehicle then
         local unit = ...
         if unit == "player" then 
-            self:SetShown(not UnitInVehicle("player"))
+            self:UpdateVisibility()
+            self:Update()
         end
     elseif event == "PLAYER_LOGIN" then
         LoadActionSlotMap()
         self:ApplyOptions()
+        
+        self.isTicking = true;
+        self:Tick()
     elseif event == "CVAR_UPDATE" then 
         local arg1, arg2 = ...
         if arg1 =="assistedCombatIconUpdateRate" then
@@ -299,23 +325,49 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
     end
 end
 
-function AssistedCombatIconMixin:OnUpdate(elapsed)
+function AssistedCombatIconMixin:Tick()
+    if not self.isTicking then return end
     local interval = InCombatLockdown() and self.combatUpdateInterval or self.updateInterval
-    local timeLeft = self.lastUpdateTime - elapsed
-    if timeLeft > 0 then 
-        self.lastUpdateTime = timeLeft
-        return
-    end
-    self.lastUpdateTime = interval
 
-    local nextSpell = C_AssistedCombat.GetNextCastSpell()
-    if nextSpell ~= self.spellID and nextSpell ~= 0 and nextSpell ~= nil then
-        C_Spell.EnableSpellRangeCheck(self.spellID, false)
-        self.spellID = nextSpell
-        self:UpdateCooldown()
+    self:UpdateVisibility()
+
+    if self:IsShown() then 
+        local nextSpell = C_AssistedCombat.GetNextCastSpell()
+        if nextSpell and nextSpell ~= 0 and nextSpell ~= self.spellID then
+            C_Spell.EnableSpellRangeCheck(self.spellID, false)
+            self.spellID = nextSpell
+            self:UpdateCooldown()
+        end
     end
     
     self:Update()
+
+    C_Timer.After(interval, function()
+        self:Tick()
+    end)
+end
+
+function AssistedCombatIconMixin:UpdateVisibility()
+    local db = self.db
+    local display = db.display
+
+    if display.ALWAYS then
+        self:SetShown(true)
+        return
+    end
+
+    if (display.HOSTILE_TARGET and not UnitCanAttack("player", "target"))
+        or (display.IN_COMBAT and not InCombatLockdown())
+        or (display.HideInVehicle and UnitInVehicle("player"))
+        or (display.HideAsHealer and UnitGroupRolesAssigned("player") == "HEALER")
+        or (display.HideOnMount and IsMounted())
+        or not db.locked
+    then
+        self:SetShown(false)
+        return
+    end
+
+    self:SetShown(true)
 end
 
 function AssistedCombatIconMixin:Update()
@@ -397,17 +449,7 @@ function AssistedCombatIconMixin:ApplyOptions()
         self.MSQGroup:ReSkin()
     end
     
-    local show =
-        not db.locked or
-        db.displayMode == "ALWAYS" or
-        (db.displayMode == "HOSTILE_TARGET" and UnitCanAttack("player", "target")) or
-        (db.displayMode == "IN_COMBAT" and InCombatLockdown())
-
-    local isHealer = (db.display.HideInHealerRole and (UnitGroupRolesAssigned("player") == "HEALER"))
-    local inVehicle = (db.display.HideInVehicle and UnitInVehicle("player"))
-    
-    self:SetShown(show and not inVehicle and not isHealer)
-
+    self:UpdateVisibility()
     self:Update()
 end
 

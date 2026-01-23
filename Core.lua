@@ -8,6 +8,7 @@ local AceAddon = LibStub("AceAddon-3.0")
 local AceConfig = LibStub("AceConfig-3.0")
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceDB = LibStub("AceDB-3.0")
+local DB_VERSION = 2
 
 addon = AceAddon:NewAddon(addon, addonName, "AceConsole-3.0", "AceEvent-3.0")
 
@@ -15,10 +16,13 @@ local defaults = {
     profile = {
         locked = false,
         showCooldownSwipe = true,
-        displayMode = "ALWAYS",
         display = {
             HideInVehicle = false,
             HideInHealerRole = false,
+            HideOnMount = false,
+            HOSTILE_TARGET = false,
+            IN_COMBAT = false,
+            ALWAYS = true,
         },
         iconSize = 48,
         border = {
@@ -52,6 +56,32 @@ function addon:OnInitialize()
     AssistedCombatIconFrame:OnAddonLoaded();
 
     self:SetupOptions()
+
+    self:UpdateDB()
+end
+
+function addon:UpdateDB()
+    local profile = self.db.profile
+    profile.DBVERSION = profile.DBVERSION or 1
+
+    if profile.DBVERSION < 2 then
+        local oldMode = profile.displayMode
+        if oldMode then
+            profile.display[oldMode] = true
+            profile.displayMode = nil
+        end
+
+        if profile.display.ALWAYS then
+            -- Clear everything except ALWAYS
+            for k, v in pairs(profile.display) do
+                if k ~= "ALWAYS" and v then
+                    profile.display[k] = false
+                end
+            end
+        end
+
+        profile.DBVERSION = DB_VERSION
+    end
 end
 
 function addon:SetupOptions()
@@ -135,48 +165,136 @@ function addon:SetupOptions()
                                 inline = true,
                                 order = 1,
                                 args = {
-                                    displayMode = {
-                                        name = "Display Mode",
-                                        desc = "Choose when the icon should be shown",
-                                        type = "select",
-                                        style = "dropdown",
-                                        values = {
-                                            ALWAYS = "Always",
-                                            IN_COMBAT = "In Combat",
-                                            HOSTILE_TARGET = "Enemy Target",
-                                        },
-                                        get = function(info) return addon.db.profile.displayMode end,
-                                        set = function(_, val)
-                                            addon.db.profile.displayMode = val
-                                            AssistedCombatIconFrame:ApplyOptions()
-                                        end,
-                                        order = 1,
-                                        width = 0.66,
-                                    },
-                                    displayVehicle = {
-                                        name = "Hide in Vehicle",
-                                        desc = "Should the icon show or hide while in a vehicle",
-                                        type = "toggle",
-                                        get = function(info) return addon.db.profile.display.HideInVehicle end,
-                                        set = function(_, val)
-                                            addon.db.profile.display.HideInVehicle = val
-                                            AssistedCombatIconFrame:ApplyOptions()
-                                        end,
+                                    displayOptions = {
+                                        type = "group",
+                                        name = "Display Options",
+                                        desc = "When to show or hide the icon.",
+                                        inline = true,
                                         order = 2,
-                                        width = "normal",
-                                    },
-                                    displayHealer = {
-                                        name = "Hide in Healer Role",
-                                        desc = "Should the icon show or hide while in a group as a healer",
-                                        type = "toggle",
-                                        get = function(info) return addon.db.profile.display.HideInHealerRole end,
-                                        set = function(_, val)
-                                            addon.db.profile.display.HideInHealerRole = val
-                                            AssistedCombatIconFrame:ApplyOptions()
-                                        end,
-                                        order = 3,
-                                        width = "normal",
-                                    },
+                                        args = {
+                                            r1 = {
+                                                type = "group",
+                                                name = "",
+                                                order = 1,
+                                                args = {
+                                                    ALWAYS = {
+                                                        type = "toggle",
+                                                        name = "Always Show",
+                                                        order = 1,
+                                                        width = 1.1,
+                                                        get = function(info)
+                                                            return addon.db.profile.display.ALWAYS
+                                                        end,
+                                                        set = function(info, val)
+                                                            addon.db.profile.display.ALWAYS = val
+                                                            if val then
+                                                                addon.db.profile.display.HideInVehicle = false
+                                                                addon.db.profile.display.HideAsHealer = false
+                                                                addon.db.profile.display.HideOnMount = false
+                                                                addon.db.profile.display.HOSTILE_TARGET = false
+                                                                addon.db.profile.display.IN_COMBAT = false
+                                                            end
+                                                            AssistedCombatIconFrame:UpdateVisibility()
+                                                        end,
+                                                    },
+                                                    HideOnMount = {
+                                                        type = "toggle",
+                                                        name = "Hide while mounted",
+                                                        order = 2,
+                                                        width = 1.1,
+                                                        get = function(info)
+                                                            return addon.db.profile.display.HideOnMount
+                                                        end,
+                                                        set = function(info, val)
+                                                            addon.db.profile.display.HideOnMount = val
+                                                            if val then
+                                                                addon.db.profile.display.ALWAYS = false
+                                                            end
+                                                            AssistedCombatIconFrame:UpdateVisibility()
+                                                        end,
+                                                    },
+                                                },
+                                            },
+                                            r2 = {
+                                                type = "group",
+                                                name = "",
+                                                order = 2,
+                                                args = {
+                                                    HOSTILE_TARGET = {
+                                                        type = "toggle",
+                                                        name = "Show only with target",
+                                                        order = 1,
+                                                        width = 1.1,
+                                                        get = function(info)
+                                                            return addon.db.profile.display.HOSTILE_TARGET
+                                                        end,
+                                                        set = function(info, val)
+                                                            addon.db.profile.display.HOSTILE_TARGET = val
+                                                            if val then 
+                                                                addon.db.profile.display.ALWAYS = false
+                                                            end
+                                                            AssistedCombatIconFrame:UpdateVisibility()
+                                                        end,
+                                                    },
+                                                    HideInVehicle = {
+                                                        type = "toggle",
+                                                        name = "Hide while in a Vehicle",
+                                                        order = 2,
+                                                        width = 1.1,
+                                                        get = function(info)
+                                                            return addon.db.profile.display.HideInVehicle
+                                                        end,
+                                                        set = function(info, val)
+                                                            addon.db.profile.display.HideInVehicle = val
+                                                            if val then
+                                                                addon.db.profile.display.ALWAYS = false
+                                                            end
+                                                            AssistedCombatIconFrame:UpdateVisibility()
+                                                        end,
+                                                    },
+                                                },
+                                            },
+                                            r3 = {
+                                                type = "group",
+                                                name = "",
+                                                order = 3,
+                                                args = {
+                                                    IN_COMBAT = {
+                                                        type = "toggle",
+                                                        name = "Show only in combat",
+                                                        order = 1,
+                                                        width = 1.1,
+                                                        get = function(info)
+                                                            return addon.db.profile.display.IN_COMBAT
+                                                        end,
+                                                        set = function(info, val)
+                                                            addon.db.profile.display.IN_COMBAT = val
+                                                            if val then
+                                                                addon.db.profile.display.ALWAYS = false
+                                                            end
+                                                            AssistedCombatIconFrame:UpdateVisibility()
+                                                        end,
+                                                    },
+                                                    HideAsHealer = {
+                                                        type = "toggle",
+                                                        name = "Hide while in Healing Role",
+                                                        order = 2,
+                                                        width = 1.1,
+                                                        get = function(info)
+                                                            return addon.db.profile.display.HideAsHealer
+                                                        end,
+                                                        set = function(info, val)
+                                                            addon.db.profile.display.HideAsHealer = val
+                                                            if val then
+                                                                addon.db.profile.display.ALWAYS = false
+                                                            end
+                                                            AssistedCombatIconFrame:UpdateVisibility()
+                                                        end,
+                                                    },
+                                                },
+                                            },
+                                        },
+                                    }
                                 },
                             },
                             grp2 = {
