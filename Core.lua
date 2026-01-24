@@ -14,6 +14,7 @@ addon = AceAddon:NewAddon(addon, addonName, "AceConsole-3.0", "AceEvent-3.0")
 
 local defaults = {
     profile = {
+        enabled = true,
         locked = false,
         showCooldownSwipe = true,
         display = {
@@ -23,6 +24,10 @@ local defaults = {
             HOSTILE_TARGET = false,
             IN_COMBAT = false,
             ALWAYS = true,
+        },
+        cooldown = {
+            edge = true,
+            bling = true,
         },
         iconSize = 48,
         border = {
@@ -84,6 +89,35 @@ function addon:UpdateDB()
     end
 end
 
+function addon:NormalizeDisplayOptions(key, val)
+    local display = self.db.profile.display
+    if not display then return end
+
+    if key == "ALWAYS" and val then
+        for k in pairs(display) do
+            if k ~= "ALWAYS" then
+                display[k] = false
+            end
+        end
+        return
+    end
+
+    if key ~= "ALWAYS" and val then
+        display.ALWAYS = false
+        return
+    end
+
+    if not val then
+        for _, v in pairs(display) do
+            if v then
+                return
+            end
+        end
+
+        display.ALWAYS = true
+    end
+end
+
 function addon:SetupOptions()
     local profileOptions = LibStub("AceDBOptions-3.0"):GetOptionsTable(addon.db)
     profileOptions.inline = false
@@ -97,6 +131,22 @@ function addon:SetupOptions()
                 name = "General Settings",
                 inline = true,
                 args = {
+                    enabled = {
+                        type = "toggle",
+                        name = "Enabled",
+                        desc = "Enable / Disable the Icon",
+                        get = function() return addon.db.profile.enabled end,
+                        set = function(_, val)
+                            addon.db.profile.enabled = val
+                            if val then 
+                                AssistedCombatIconFrame:Start()
+                            else
+                                AssistedCombatIconFrame:Stop()
+                            end
+                        end,
+                        order = 1,
+                        width = 0.6,
+                    },
                     locked = {
                         type = "toggle",
                         name = "Lock Frame",
@@ -132,18 +182,6 @@ function addon:SetupOptions()
                         end,
                         order = 3,
                         width = 0.8,
-                    },
-                    reset = {
-                        type = "execute",
-                        name = "Reset to Defaults",
-                        confirm = true,
-                        confirmText = "Are you sure you want to reset all settings to defaults?",
-                        func = function()
-                            addon.db:ResetProfile()
-                            AssistedCombatIconFrame:ApplyOptions()
-                        end,
-                        order = 6,
-                        width = "normal",
                     },
                 },
             },
@@ -185,15 +223,13 @@ function addon:SetupOptions()
                                                         get = function(info)
                                                             return addon.db.profile.display.ALWAYS
                                                         end,
-                                                        set = function(info, val)
-                                                            addon.db.profile.display.ALWAYS = val
-                                                            if val then
-                                                                addon.db.profile.display.HideInVehicle = false
-                                                                addon.db.profile.display.HideAsHealer = false
-                                                                addon.db.profile.display.HideOnMount = false
-                                                                addon.db.profile.display.HOSTILE_TARGET = false
-                                                                addon.db.profile.display.IN_COMBAT = false
+                                                        set = function(info, val)        
+                                                            if not val then
+                                                                return
                                                             end
+
+                                                            addon.db.profile.display.ALWAYS = val
+                                                            addon:NormalizeDisplayOptions("ALWAYS",val)
                                                             AssistedCombatIconFrame:UpdateVisibility()
                                                         end,
                                                     },
@@ -207,9 +243,7 @@ function addon:SetupOptions()
                                                         end,
                                                         set = function(info, val)
                                                             addon.db.profile.display.HideOnMount = val
-                                                            if val then
-                                                                addon.db.profile.display.ALWAYS = false
-                                                            end
+                                                            addon:NormalizeDisplayOptions("HideOnMount", val)
                                                             AssistedCombatIconFrame:UpdateVisibility()
                                                         end,
                                                     },
@@ -230,9 +264,7 @@ function addon:SetupOptions()
                                                         end,
                                                         set = function(info, val)
                                                             addon.db.profile.display.HOSTILE_TARGET = val
-                                                            if val then 
-                                                                addon.db.profile.display.ALWAYS = false
-                                                            end
+                                                            addon:NormalizeDisplayOptions("HOSTILE_TARGET", val)
                                                             AssistedCombatIconFrame:UpdateVisibility()
                                                         end,
                                                     },
@@ -246,9 +278,7 @@ function addon:SetupOptions()
                                                         end,
                                                         set = function(info, val)
                                                             addon.db.profile.display.HideInVehicle = val
-                                                            if val then
-                                                                addon.db.profile.display.ALWAYS = false
-                                                            end
+                                                            addon:NormalizeDisplayOptions("HideInVehicle", val)
                                                             AssistedCombatIconFrame:UpdateVisibility()
                                                         end,
                                                     },
@@ -269,9 +299,7 @@ function addon:SetupOptions()
                                                         end,
                                                         set = function(info, val)
                                                             addon.db.profile.display.IN_COMBAT = val
-                                                            if val then
-                                                                addon.db.profile.display.ALWAYS = false
-                                                            end
+                                                            addon:NormalizeDisplayOptions("IN_COMBAT", val)
                                                             AssistedCombatIconFrame:UpdateVisibility()
                                                         end,
                                                     },
@@ -285,9 +313,7 @@ function addon:SetupOptions()
                                                         end,
                                                         set = function(info, val)
                                                             addon.db.profile.display.HideAsHealer = val
-                                                            if val then
-                                                                addon.db.profile.display.ALWAYS = false
-                                                            end
+                                                            addon:NormalizeDisplayOptions("HideAsHealer", val)
                                                             AssistedCombatIconFrame:UpdateVisibility()
                                                         end,
                                                     },
@@ -443,10 +469,50 @@ function addon:SetupOptions()
                     },
                 },
             },
+            cooldown = {
+                type = "group",
+                name = "Cooldown",
+                inline = false,
+                order = 2,
+                args = {
+                    subgroup1 = {
+                        type = "group",
+                        name = "Animation",
+                        inline = true,
+                        args = {
+                            edge = {
+                                type = "toggle",
+                                name = "Draw Edge",
+                                desc = "Sets whether a bright line should be drawn on the moving edge of the cooldown animation.",
+                                get = function() return addon.db.profile.cooldown.edge end,
+                                set = function(_, val)
+                                    addon.db.profile.cooldown.edge = val
+                                    AssistedCombatIconFrame:ApplyOptions()
+                                end,
+                                order = 1,
+                                width = 0.8,
+                            },
+                            bling = {
+                                type = "toggle",
+                                name = "Draw Bling",
+                                desc = "Set whether a 'bling' animation plays at the end of a cooldown.",
+                                get = function() return addon.db.profile.cooldown.bling end,
+                                set = function(_, val)
+                                    addon.db.profile.cooldown.bling = val
+                                    AssistedCombatIconFrame:ApplyOptions()
+                                end,
+                                order = 2,
+                                width = 0.8,
+                            },
+                        },
+                    },
+                },
+            },
             keybind = {
                 type = "group",
                 name = "Keybind",
                 inline = false,
+                order = 3,
                 args = {
                     subgroup1 = {
                         type = "group",
@@ -566,6 +632,40 @@ function addon:SetupOptions()
                                 end,
                                 order = 7,
                                 width = 0.8,
+                            },
+                        },
+                    },
+                },
+            },
+            advanced = {
+                type = "group",
+                name = "Advanced",
+                inline = false,
+                order = 9,
+                args = {
+                    subgroup2 = {
+                        type = "group",
+                        name = "Advanced Options",
+                        inline = true,
+                        args = {
+                            point = {
+                                type = "input",
+                                name = " Frame Parent",
+                                desc = "Enter a frame name to anchor the icon to.",
+                                get = function() return addon.db.profile.position.parent or "UIParent" end,
+                                set = function(_, val)
+                                    if val == "" then val = "UIParent" end
+                                    addon.db.profile.position.parent = val
+                                    AssistedCombatIconFrame:ApplyOptions()
+                                end,
+                                validate = function(info, value)
+                                    if value == "" then return true end
+                                    if not _G[value] then
+                                        return "That frame doesn't exist."
+                                    end
+                                    return true
+                                end,
+                                order = 1,
                             },
                         },
                     },

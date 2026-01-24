@@ -20,8 +20,12 @@ local Masque = LibStub("Masque",true)
 local HasBartender = false
 local HasDominos = false
 local BarAddonLoaded = false
+
+local AddonOverrideActionBySlot 
+local AddonOverrideButtonByAction
 local AddonLookupActionBySlot = {}
 local AddonLookupButtonByAction = {}
+
 local LookupActionBySlot = {}
 local LookupButtonByAction = {}
 
@@ -43,17 +47,6 @@ local DefaultActionSlotMap = {
     { actionPrefix = "MULTIACTIONBAR6BUTTON", buttonPrefix ="MultiBar6Button",          start = 157,last = 168},--Action Bar 7
     { actionPrefix = "MULTIACTIONBAR7BUTTON", buttonPrefix ="MultiBar7Button",          start = 169,last = 180},--Action Bar 8
     { actionPrefix = "SHAPESHIFTBUTTON",      buttonPrefix ="StanceButton",             start = 901,last = 907},--Stance Bar. Dummy slots
-}
-
-local BartenderActionSlotMap = {
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 1,  last = 72}, --Action Bars
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 73, last = 84}, --Class Bar 1
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 85, last = 96}, --Class Bar 2
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 97, last = 108},--Class Bar 3
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 109,last = 120},--Class Bar 4
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 121,last = 132},--(Skyriding)
-    { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start = 145, start = 145,last = 180},
-    { actionPattern = "CLICK %s%s:LeftButton", buttonPrefix ="BT4StanceButton", id_start = 1, start = 901,last = 907}, --Stance Bar. Dummy slots
 }
 
 local Colors = {
@@ -130,33 +123,32 @@ local function GetStanceSlotBySpellID(spellID)
     return nil
 end
 
-local function GetButtonFrameByAction(addonAction, defaultAction)
-    local buttonName
-
-    if BarAddonLoaded and addonAction then
-        buttonName = AddonLookupButtonByAction[addonAction]
-    else
-        buttonName = LookupButtonByAction[defaultAction]
-    end
-
-    return _G[buttonName]
-end
-
 local function GetBindingForSlots(slots, spellID)
     if not slots then return end
 
     for _, slot in ipairs(slots) do
         local actionType, _, subType = GetActionInfo(slot)
         if IsRelevantAction(actionType, subType, slot) then
-            
             local defaultAction = LookupActionBySlot[slot]
             local addonAction = BarAddonLoaded and AddonLookupActionBySlot[slot]
 
-            local buttonFrame = GetButtonFrameByAction(addonAction, defaultAction) 
+            local buttonName = BarAddonLoaded and AddonLookupButtonByAction[addonAction] or LookupButtonByAction[defaultAction]
+            local buttonFrame = _G[buttonName]
             
             local text = BarAddonLoaded and GetBindingForAction(addonAction)
-            
-            if not text then 
+
+            if buttonFrame and buttonFrame.action ~= slot and AddonOverrideActionBySlot and AddonOverrideButtonByAction then
+                local ovrAction = AddonOverrideActionBySlot[slot]
+                local ovrButtonName = AddonOverrideButtonByAction[ovrAction]
+                local ovrText = GetBindingForAction(ovrAction)
+
+                if ovrText then
+                    buttonFrame = _G[ovrButtonName]
+                    text = ovrText
+                end
+            end
+
+            if not text then
                 text = GetBindingForAction(defaultAction)
             end 
 
@@ -193,13 +185,66 @@ end
 
 local function LoadActionSlotMap()
     if C_AddOns.IsAddOnLoaded("Dominos") then
-        for slot = 1, 180 do
-            AddonLookupActionBySlot[slot] = "CLICK DominosActionButton"..slot..":HOTKEY"
-            AddonLookupButtonByAction[AddonLookupActionBySlot[slot]] = "DominosActionButton"..slot
+        local AddonActionSlotMap = {
+            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="DominosActionButton",        start = 1,  last = 12}, --Bar 1 
+            { actionPrefix = "ACTIONBUTTON",           buttonPrefix ="DominosActionButton",       start = 13, last = 24}, --Bar 2
+            { actionPrefix = "MULTIACTIONBAR3BUTTON",   buttonPrefix ="MultiBarRightButton",      start = 25, last = 36}, --Bar 3
+            { actionPrefix = "MULTIACTIONBAR4BUTTON",   buttonPrefix ="MultiBarLeftButton",       start = 37, last = 48}, --Bar 4 
+            { actionPrefix = "MULTIACTIONBAR2BUTTON",   buttonPrefix ="MultiBarBottomRightButton",start = 49, last = 60}, --Bar 5 
+            { actionPrefix = "MULTIACTIONBAR1BUTTON",   buttonPrefix ="MultiBarBottomLeftButton", start = 61, last = 72}, --Bar 6
+            { actionPrefix = "ACTIONBUTTON",           buttonPrefix ="DominosActionButton",       start = 73, last = 84}, --Bar 7
+            { actionPrefix = "ACTIONBUTTON",           buttonPrefix ="DominosActionButton",       start = 85, last = 96}, --Bar 8
+            { actionPrefix = "ACTIONBUTTON",           buttonPrefix ="DominosActionButton",       start = 97, last = 108},--Bar 9
+            { actionPrefix = "ACTIONBUTTON",           buttonPrefix ="DominosActionButton",       start = 109,last = 120},--Bar 10
+            { actionPrefix = "ACTIONBUTTON",           buttonPrefix ="DominosActionButton",       start = 121,last = 132},--Bar 11
+            { actionPrefix = "MULTIACTIONBAR5BUTTON",   buttonPrefix ="MultiBar5Button",          start = 145,last = 156},--Bar 12
+            { actionPrefix = "MULTIACTIONBAR6BUTTON",   buttonPrefix ="MultiBar6Button",          start = 157,last = 168},--Bar 13
+            { actionPrefix = "MULTIACTIONBAR7BUTTON",   buttonPrefix ="MultiBar7Button",          start = 169,last = 180},--Bar 14
+            { actionPrefix = "SHAPESHIFTBUTTON",        buttonPrefix ="DominosStanceButton",      start = 901,last = 907},--Stance Bar. Dummy slots
+        }
+
+        local OverrideActionPattern = "CLICK %s%s:HOTKEY"
+        local OverrideButtonPrefix = "DominosActionButton"
+        local OverrideSlotMap = {
+            { start = 13, last = 24}, --Bar 2
+            { start = 73, last = 84}, --Bar 7
+            { start = 85, last = 96}, --Bar 8
+            { start = 97, last = 108},--Bar 9
+            { start = 109,last = 120},--Bar 10
+            { start = 121,last = 132},--Bar 11
+        }
+
+        for _, info in ipairs(AddonActionSlotMap) do
+            for slot = info.start, info.last do
+                local id = slot - info.start + 1
+                AddonLookupActionBySlot[slot] = info.actionPrefix..id
+                AddonLookupButtonByAction[AddonLookupActionBySlot[slot]] = info.buttonPrefix..id
+            end
         end
+
+        AddonOverrideActionBySlot = {}
+        AddonOverrideButtonByAction = {}
+        for _, info in ipairs(OverrideSlotMap) do
+            for slot = info.start, info.last do
+                AddonOverrideActionBySlot[slot] = OverrideActionPattern:format(OverrideButtonPrefix,slot)
+                AddonOverrideButtonByAction[AddonOverrideActionBySlot[slot]] = OverrideButtonPrefix..slot
+            end
+        end
+
         HasDominos  = true
     elseif C_AddOns.IsAddOnLoaded("Bartender4") then
-        for _, info in ipairs(BartenderActionSlotMap) do
+        local AddonActionSlotMap = {
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 1,  last = 72}, --Action Bars
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 73, last = 84}, --Class Bar 1
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 85, last = 96}, --Class Bar 2
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 97, last = 108},--Class Bar 3
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 109,last = 120},--Class Bar 4
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start =  1,  start = 121,last = 132},--(Skyriding)
+            { actionPattern = "CLICK %s%s:Keybind", buttonPrefix ="BT4Button", id_start = 145, start = 145,last = 180},
+            { actionPattern = "CLICK %s%s:LeftButton", buttonPrefix ="BT4StanceButton", id_start = 1, start = 901,last = 907}, --Stance Bar. Dummy slots
+        }
+
+        for _, info in ipairs(AddonActionSlotMap) do
             local id = info.id_start
             for slot = info.start, info.last do
                 local t = id
@@ -211,6 +256,7 @@ local function LoadActionSlotMap()
                 id = id + 1
             end
         end
+
         HasBartender = true
     end
 
@@ -315,14 +361,31 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
         LoadActionSlotMap()
         self:ApplyOptions()
         
-        self.isTicking = true;
-        self:Tick()
+        if self.db.enabled then 
+            self:Start()
+        else
+            self:Stop()
+        end
+
     elseif event == "CVAR_UPDATE" then 
         local arg1, arg2 = ...
         if arg1 =="assistedCombatIconUpdateRate" then
             self.combatUpdateInterval = tonumber(arg2) or self.combatUpdateInterval
         end
     end
+end
+
+function AssistedCombatIconMixin:Start()
+    if self.isTicking then return end
+
+    self.isTicking = true
+    self.spellID = C_AssistedCombat.GetNextCastSpell()
+    self:Tick()
+end
+
+function AssistedCombatIconMixin:Stop()
+    self.isTicking = false
+    self:SetShown(false) 
 end
 
 function AssistedCombatIconMixin:Tick()
@@ -351,17 +414,18 @@ function AssistedCombatIconMixin:UpdateVisibility()
     local db = self.db
     local display = db.display
 
-    if display.ALWAYS then
+    if not self.isTicking then self:SetShown(false) end
+
+    if display.ALWAYS or not db.locked then
         self:SetShown(true)
         return
     end
 
-    if (display.HOSTILE_TARGET and not UnitCanAttack("player", "target"))
+    if     (display.HOSTILE_TARGET and not UnitCanAttack("player", "target"))
         or (display.IN_COMBAT and not InCombatLockdown())
         or (display.HideInVehicle and UnitInVehicle("player"))
         or (display.HideAsHealer and UnitGroupRolesAssigned("player") == "HEALER")
         or (display.HideOnMount and IsMounted())
-        or not db.locked
     then
         self:SetShown(false)
         return
@@ -409,13 +473,16 @@ function AssistedCombatIconMixin:Update()
 	end
 end
 
-
 function AssistedCombatIconMixin:ApplyOptions()
 
     local db = self.db
     self:ClearAllPoints()
     self:Lock(db.locked)
     self:SetSize(db.iconSize, db.iconSize)
+
+    local parent = _G[db.position.parent] or UIParent
+    self:SetParent(parent)
+    self:SetScale(UIParent:GetEffectiveScale()/parent:GetEffectiveScale())
     self:SetPoint(db.position.point, db.position.parent, db.position.point, db.position.X, db.position.Y)
 
     self:SetFrameStrata(frameStrata[db.position.strata])
@@ -453,7 +520,6 @@ function AssistedCombatIconMixin:ApplyOptions()
     self:Update()
 end
 
-
 function AssistedCombatIconMixin:UpdateCooldown()
     local spellID = self.spellID
     if not self.db.showCooldownSwipe or not spellID or spellID == 0 then return end
@@ -466,6 +532,8 @@ function AssistedCombatIconMixin:UpdateCooldown()
 
     if cdInfo then
         self.Cooldown.currentCooldownType = COOLDOWN_TYPE_NORMAL
+        self.Cooldown:SetDrawEdge(self.db.cooldown.edge)
+        self.Cooldown:SetDrawBling(self.db.cooldown.bling)
         self.Cooldown:SetEdgeTexture("Interface\\Cooldown\\UI-HUD-ActionBar-SecondaryCooldown")
         self.Cooldown:SetSwipeColor(0, 0, 0)
         self.Cooldown:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
@@ -491,7 +559,7 @@ function AssistedCombatIconMixin:OnDragStop()
     self.db.position = {
         strata = strata,
         point = point,
-        parent = relativeTo,
+        parent = self:GetParent() and self:GetParent():GetName() or relativeTo,
         relativePoint = relativePoint,
         X = math.floor(xOfs+0.5),
         Y = math.floor(yOfs+0.5),
