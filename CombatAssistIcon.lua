@@ -6,7 +6,6 @@ local GetActionInfo     = GetActionInfo
 local GetBindingKey     = GetBindingKey
 local GetBindingText    = GetBindingText
 local InCombatLockdown  = InCombatLockdown
-local FindBaseSpellByID = FindBaseSpellByID
 local C_CVar            = C_CVar
 local C_Spell           = C_Spell
 local C_SpellBook       = C_SpellBook
@@ -67,6 +66,12 @@ local frameStrata = {
     "DIALOG",
     "TOOLTIP",
 }
+
+local function IsValidSpellID(spellID)
+    return  type(spellID) == "number" 
+            and spellID > 0 
+            and C_Spell.DoesSpellExist(spellID)
+end
 
 local function IsRelevantAction(actionType, subType, slot)
     return (actionType == "macro" and subType == "spell")
@@ -133,7 +138,9 @@ local function GetBindingForSlots(slots, spellID)
 end
 
 local function GetKeyBindForSpellID(spellID)
-    local baseSpellID = FindBaseSpellByID(spellID)
+    if not IsValidSpellID(spellID) then return end
+
+    local baseSpellID = C_SpellBook.FindBaseSpellByID(spellID)
 
     local slots = C_ActionBar.FindSpellActionButtons(baseSpellID)
     
@@ -241,12 +248,6 @@ local function LoadActionSlotMap()
             LookupButtonByAction[LookupActionBySlot[slot]] = info.buttonPrefix .. index
         end
     end
-end
-
-local function IsValidSpellID(spellID)
-    return  type(spellID) == "number" 
-            and spellID > 0 
-            and C_Spell.DoesSpellExist(spellID)
 end
 
 AssistedCombatIconMixin = {}
@@ -416,7 +417,7 @@ function AssistedCombatIconMixin:UpdateVisibility()
 end
 
 function AssistedCombatIconMixin:Update()
-    if not self:IsShown() then return end
+    if not IsValidSpellID(self.spellID) and not self:IsShown() then return end
 
     local db = self.db
     local spellID = self.spellID
@@ -523,6 +524,7 @@ function AssistedCombatIconMixin:ApplyOptions()
 end
 
 function AssistedCombatIconMixin:UpdateCooldown()
+    if not IsValidSpellID(self.spellID) and not self:IsShown() then return end
     local spellID = self.spellID
 
     local cdInfo = C_Spell.GetSpellCooldown(spellID)
