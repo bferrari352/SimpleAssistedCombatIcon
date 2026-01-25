@@ -14,11 +14,13 @@
             </Layer>
             <Layer level="OVERLAY">
                 <FontString parentKey="Keybind" inherits="NumberFontNormalSmall" justifyH="RIGHT" />
+                <FontString parentKey="Count" inherits="NumberFontNormal" justifyH="RIGHT" />
             </Layer>
         </Layers>
         <Frames>
             <Frame parentKey="Overlay" enableMouse="false" setAllPoints="true" />
             <Cooldown parentKey="Cooldown" enableMouse="false" inherits="CooldownFrameTemplate" setAllPoints="true" />
+			<Cooldown parentKey="chargeCooldown" enableMouse="false" inherits="CooldownFrameTemplate" hideCountdownNumbers="true" />
         </Frames>
         <Scripts>
             <OnLoad method="OnLoad"/>
