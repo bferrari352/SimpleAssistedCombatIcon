@@ -359,7 +359,6 @@ function AssistedCombatIconMixin:Start()
     if self.isTicking then return end
 
     self.isTicking = true
-    self.spellID = C_AssistedCombat.GetNextCastSpell()
     self:Tick()
 end
 
@@ -417,7 +416,7 @@ function AssistedCombatIconMixin:UpdateVisibility()
 end
 
 function AssistedCombatIconMixin:Update()
-    if not IsValidSpellID(self.spellID) and not self:IsShown() then return end
+    if not IsValidSpellID(self.spellID) or not self:IsShown() then return end
 
     local db = self.db
     local spellID = self.spellID
