@@ -68,6 +68,7 @@ local defaults = {
             point = "TOPRIGHT",
             X = -4,
             Y = -4,
+            ConsolePort = false,
         }
     }
 }
@@ -106,12 +107,14 @@ function addon:UpdateDB()
     if profile.DBVERSION < 3 then
         local oldMode = profile.showCooldownSwipe
         if oldMode ~= nil then
-            profile.cooldown.cooldown.showSwipe = oldMode
+            profile.cooldown.showSwipe = oldMode
             profile.showCooldownSwipe = nil
         end
 
         profile.DBVERSION = 3
     end
+
+    profile.DBVERSION = DB_VERSION
 end
 
 function addon:NormalizeDisplayOptions(key, val)
@@ -641,6 +644,7 @@ function addon:SetupOptions()
                 type = "group",
                 name = "Display",
                 inline = true,
+                order = 1,
                 args = {
                     font = {
                         type = "select",
@@ -703,6 +707,7 @@ function addon:SetupOptions()
                 type = "group",
                 name = "Position",
                 inline = true,
+                order = 2,
                 args = {
                     point = {
                         type = "select",
@@ -755,6 +760,26 @@ function addon:SetupOptions()
                         end,
                         order = 7,
                         width = 0.8,
+                    },
+                },
+            },
+            subgroup3 = {
+                type = "group",
+                name = "Advanced",
+                inline = true,
+                order = 3,
+                args = {
+                    ConsolePort = {
+                        type = "toggle",
+                        name = "Use ConsolePort Icons",
+                        desc = "Set if Gamepad icons should be shown instead of Keyboard bindings.",
+                        get = function() return addon.db.profile.Keybind.ConsolePort end,
+                        set = function(_, val)
+                            addon.db.profile.Keybind.ConsolePort = val
+                        end,
+                        disabled = function() return not ConsolePort end,
+                        order = 1,
+                        width = 1.2,
                     },
                 },
             },

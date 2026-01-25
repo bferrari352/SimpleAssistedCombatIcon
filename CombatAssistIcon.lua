@@ -129,6 +129,12 @@ local function GetBindingForSlots(slots, spellID)
                 text = GetBindingForAction(defaultAction)
             end 
 
+            if addon.db.profile.Keybind.ConsolePort and ConsolePort then 
+                local bindingID = ConsolePort:GetActionBinding(slot)
+                local binding = ConsolePort:GetFormattedBindingOwner(bindingID)
+                if binding and binding ~= "" then return binding end
+            end
+
             if buttonFrame and (slot > 900 or
                buttonFrame.action == slot) and text then
                 return text
