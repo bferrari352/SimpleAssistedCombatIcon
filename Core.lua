@@ -46,6 +46,8 @@ local defaults = {
         },
         iconSize = 48,
         alpha = 1, 
+        fadeOutAlpha = 0.25,
+        fadeOutHide = false,
         border = {
             show = true,
             thickness = 2,
@@ -318,7 +320,8 @@ function addon:SetupOptions()
                             },
                             HideAsHealer = {
                                 type = "toggle",
-                                name = "Hide while in Healing Role",
+                                name = "Hide in Healer Role",
+                                desc = "Hide the icon while in group content as a healer role.\n\n Icon still displays while solo.",
                                 order = 2,
                                 width = 1.1,
                                 get = function(info)
@@ -332,17 +335,53 @@ function addon:SetupOptions()
                             },
                         },
                     },
+                    grp2 = {
+                        type = "group",
+                        name = "",
+                        inline = true,
+                        order = 9,
+                        args = {
+                            iconSize = {
+                                type = "toggle",
+                                name = "Fade instead of Hiding",
+                                desc = "Set the icon Alpha level instead of hiding.",
+                                get = function() return addon.db.profile.fadeOutHide end,
+                                set = function(_, val)
+                                    addon.db.profile.fadeOutHide = val
+                                    AssistedCombatIconFrame:ApplyOptions()
+                                end,
+                                disabled = function() return addon.db.profile.display.ALWAYS end,
+                                order = 1,
+                                width = "normal",
+                            },
+                            alpha = {
+                                type = "range",
+                                name = " Fade out Alpha",
+                                desc = "Set the alpha to fade to when 'hidden'.",
+                                min = 0, max = 1, step = 0.01,
+                                get = function() return addon.db.profile.fadeOutAlpha end,
+                                set = function(_, val)
+                                    addon.db.profile.fadeOutAlpha = val
+                                    AssistedCombatIconFrame:ApplyOptions()
+                                end,
+                                disabled = function() return addon.db.profile.display.ALWAYS or not addon.db.profile.fadeOutHide end,
+                                order = 2,
+                                width = "normal",
+                                
+                            },
+                        },
+                    },
                 },
             },
-            grp2 = {
+            grp3 = {
                 type = "group",
                 name = "Icon",
                 inline = true,
-                order = 2,
+                order = 3,
                 args = {
                     iconSize = {
                         type = "range",
-                        name = "Icon Size",
+                        name = "Size",
                         desc = "Set the size of the icon",
                         min = 20, max = 300, step = 1,
                         get = function() return addon.db.profile.iconSize end,
@@ -368,11 +407,11 @@ function addon:SetupOptions()
                     },
                 },
             },
-            grp3 = {
+            grp4 = {
                 type = "group",
                 name = "Border",
                 inline = true,
-                order = 3,
+                order = 4,
                 args = {
                     borderColor = {
                         type = "color",
