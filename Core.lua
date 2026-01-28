@@ -345,7 +345,7 @@ function addon:SetupOptions()
                             IN_COMBAT = {
                                 type = "toggle",
                                 name = "All Conditions Only",
-                                desc = "Only show when all of the selected conditions are met instead of any condtion.",
+                                desc = "Only show when all of the selected conditions are met instead of any condition.",
                                 order = 1,
                                 width = 1.5,
                                 get = function(info)
@@ -440,7 +440,7 @@ function addon:SetupOptions()
                 args = {
                     masqueWarning = {
                         type = "description",
-                        name = "|cffffa000Border is controlled by Masque.|r",
+                        name = "|cffffa000Border is currently overridden by Masque.|r",
                         hidden = function() return not (Masque and AssistedCombatIconFrame.MSQGroup and not AssistedCombatIconFrame.MSQGroup.db.Disabled) end,
                         order = 9.1,
                     },
@@ -457,7 +457,7 @@ function addon:SetupOptions()
                             addon.db.profile.border.color = { r = r, g = g, b = b }
                             AssistedCombatIconFrame:ApplyOptions()
                         end,
-                        disabled = function() return Masque and AssistedCombatIconFrame.MSQGroup and not AssistedCombatIconFrame.MSQGroup.db.Disabled end, 
+                        hidden = function() return (Masque and AssistedCombatIconFrame.MSQGroup and not AssistedCombatIconFrame.MSQGroup.db.Disabled) end,
                         order = 2,
                     },
                     borderThickness = {
@@ -470,7 +470,7 @@ function addon:SetupOptions()
                             addon.db.profile.border.thickness = val
                             AssistedCombatIconFrame:ApplyOptions()
                         end,
-                        disabled = function() return Masque and AssistedCombatIconFrame.MSQGroup and not AssistedCombatIconFrame.MSQGroup.db.Disabled end, 
+                        hidden = function() return (Masque and AssistedCombatIconFrame.MSQGroup and not AssistedCombatIconFrame.MSQGroup.db.Disabled) end,
                         order = 1,
                     },
                 },
@@ -480,7 +480,7 @@ function addon:SetupOptions()
 
     local cooldownOptions = {
         type = "group",
-        name = "Cooldown",
+        name = "Cooldown & Charges",
         inline = false,
         order = 3,
         args = {
@@ -607,7 +607,7 @@ function addon:SetupOptions()
                                     AssistedCombatIconFrame:ApplyOptions()
                                 end,
                                 order = 2,
-                                width = 0.8,
+                                width = 0.7,
                             },
                             fontOutline = {
                                 type = "toggle",
@@ -1001,6 +1001,7 @@ function addon:SetupOptions()
                             AssistedCombatIconFrame:ApplyOptions()
                         end,
                         order = 2,
+                        width = 0.8,
                     },
                 },
             },
