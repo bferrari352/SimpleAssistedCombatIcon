@@ -82,6 +82,8 @@ local function GetStanceSlotBySpellID(spellID)
 end
 
 local function GetConsolePortBinding(slots)
+    if not slots then return end
+    
     for _, slot in ipairs(slots) do
         local actionType, _, subType = GetActionInfo(slot)
         if IsRelevantAction(actionType, subType, slot) then
