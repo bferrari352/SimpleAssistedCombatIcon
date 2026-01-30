@@ -1080,6 +1080,7 @@ function addon:SlashCommand(input)
         )
     elseif input =="reload" then
         AssistedCombatIconFrame:Reload()
+        DEFAULT_CHAT_FRAME:AddMessage(PREFIX.."Reloaded!")
     elseif input =="debug" then
         AssistedCombatIconFrame:Debug()
     else
@@ -1088,6 +1089,7 @@ function addon:SlashCommand(input)
             "/saci          -Open Config Menu\n" ..
             "/saci lock     -Toggle Locking the Icon \n" ..
             "/saci unlock   -Unlock the Icon \n" ..
+            "/saci reload   -Restart the addon \n" ..
             "/saci toggle   -Toggle the addon On or Off"
         )
     end

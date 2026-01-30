@@ -210,17 +210,17 @@ local function LoadActionSlotMap()
         end
     elseif HasBartender then
         local Bartender4ActionSlotMap = {
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 1,  last = 12}, --Bar 1 
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 13, last = 24}, --Bar 2
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 1,  last = 12}, --Bar 1 
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 13, last = 24}, --Bar 2
             { actionPrefix = "MULTIACTIONBAR3BUTTON", buttonPrefix ="BT4Button",  start = 25, last = 36}, --Bar 3
             { actionPrefix = "MULTIACTIONBAR4BUTTON", buttonPrefix ="BT4Button",  start = 37, last = 48}, --Bar 4 
             { actionPrefix = "MULTIACTIONBAR2BUTTON", buttonPrefix ="BT4Button",  start = 49, last = 60}, --Bar 5 
             { actionPrefix = "MULTIACTIONBAR1BUTTON", buttonPrefix ="BT4Button",  start = 61, last = 72}, --Bar 6
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 73, last = 84}, --Bar 7
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 85, last = 96}, --Bar 8
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 97, last = 108},--Bar 9
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 109,last = 120},--Bar 10
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="BT4Button",  start = 121,last = 132},--Bar 11
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 73, last = 84}, --Bar 7
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 85, last = 96}, --Bar 8
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 97, last = 108},--Bar 9
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 109,last = 120},--Bar 10
+            { actionPrefix = "ACTIONBUTTON",id= true, buttonPrefix ="BT4Button",  start = 121,last = 132},--Bar 11
             { actionPrefix = "MULTIACTIONBAR5BUTTON", buttonPrefix ="BT4Button",  start = 145,last = 156},--Bar 13
             { actionPrefix = "MULTIACTIONBAR6BUTTON", buttonPrefix ="BT4Button",  start = 157,last = 168},--Bar 14
             { actionPrefix = "MULTIACTIONBAR7BUTTON", buttonPrefix ="BT4Button",  start = 169,last = 180},--Bar 15
@@ -234,13 +234,11 @@ local function LoadActionSlotMap()
 
         for _, info in ipairs(Bartender4ActionSlotMap) do
             for slot = info.start, info.last do
-                local id = slot - info.start + 1
-                local t = id
-                if _G[info.buttonPrefix..slot] then 
-                    t = slot
-                end
+                local id =slot - info.start + 1
+                local button = info.id and id or slot
+                
                 LookupActionBySlot[slot] = info.actionPrefix..id
-                LookupButtonByAction[LookupActionBySlot[slot]] = info.buttonPrefix..t
+                LookupButtonByAction[LookupActionBySlot[slot]] = info.buttonPrefix..button
             end
         end
 
@@ -299,18 +297,18 @@ local function LoadActionSlotMap()
     else
         local DefaultActionSlotMap = {
             --Default UI Slot mapping https://warcraft.wiki.gg/wiki/Action_slot
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 1,  last = 12},--Action Bar 1 (Main Bar)
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 13, last = 24},--Action Bar 1 (Page 2)
-            { actionPrefix = "MULTIACTIONBAR3BUTTON", buttonPrefix ="MultiBarRightButton",      start = 25, last = 36},--Action Bar 4 (Right)
-            { actionPrefix = "MULTIACTIONBAR4BUTTON", buttonPrefix ="MultiBarLeftButton",       start = 37, last = 48},--Action Bar 5 (Left)
-            { actionPrefix = "MULTIACTIONBAR2BUTTON", buttonPrefix ="MultiBarBottomRightButton",start = 49, last = 60},--Action Bar 3 (Bottom Right)
-            { actionPrefix = "MULTIACTIONBAR1BUTTON", buttonPrefix ="MultiBarBottomLeftButton", start = 61, last = 72},--Action Bar 2 (Bottom Left)
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 73, last = 84},--Class Bar 1
-            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 85, last = 96},--Class Bar 2
+            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 1,  last = 12}, --Action Bar 1 (Main Bar)
+            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 13, last = 24}, --Action Bar 1 (Page 2)
+            { actionPrefix = "MULTIACTIONBAR3BUTTON", buttonPrefix ="MultiBarRightButton",      start = 25, last = 36}, --Action Bar 4 (Right)
+            { actionPrefix = "MULTIACTIONBAR4BUTTON", buttonPrefix ="MultiBarLeftButton",       start = 37, last = 48}, --Action Bar 5 (Left)
+            { actionPrefix = "MULTIACTIONBAR2BUTTON", buttonPrefix ="MultiBarBottomRightButton",start = 49, last = 60}, --Action Bar 3 (Bottom Right)
+            { actionPrefix = "MULTIACTIONBAR1BUTTON", buttonPrefix ="MultiBarBottomLeftButton", start = 61, last = 72}, --Action Bar 2 (Bottom Left)
+            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 73, last = 84}, --Class Bar 1
+            { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 85, last = 96}, --Class Bar 2
             { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 97, last = 108},--Class Bar 3
             { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 109,last = 120},--Class Bar 4
             { actionPrefix = "ACTIONBUTTON",          buttonPrefix ="ActionButton",             start = 121,last = 132},--Action Bar 1 (Skyriding)
-        --{ actionPrefix = "UNKNOWN",               buttonPrefix ="",                         start = 133,last = 144},--Unknown
+          --{ actionPrefix = "UNKNOWN",               buttonPrefix ="",                         start = 133,last = 144},--Unknown
             { actionPrefix = "MULTIACTIONBAR5BUTTON", buttonPrefix ="MultiBar5Button",          start = 145,last = 156},--Action Bar 6
             { actionPrefix = "MULTIACTIONBAR6BUTTON", buttonPrefix ="MultiBar6Button",          start = 157,last = 168},--Action Bar 7
             { actionPrefix = "MULTIACTIONBAR7BUTTON", buttonPrefix ="MultiBar7Button",          start = 169,last = 180},--Action Bar 8
@@ -349,14 +347,15 @@ function AssistedCombatIconMixin:OnLoad()
     self:RegisterForDrag("LeftButton")
 
     self.spellID = 61304
-    self.combatUpdateInterval = tonumber(C_CVar.GetCVar("assistedCombatIconUpdateRate")) or 0.3
-    self.updateInterval = 1
+    self.updateInterval = tonumber(C_CVar.GetCVar("assistedCombatIconUpdateRate")) or 0.25
+    self.lastTickTime = GetTime()
 
     self.Keybind:SetParent(self.Overlay)
     self.Count:SetParent(self.Overlay)
 
     self.lockBtn:SetNormalTexture("Interface\\buttons\\lockbutton-unlocked-up")
     self.lockBtn:SetPushedTexture("Interface\\buttons\\lockbutton-unlocked-down")
+    self.lockBtn:SetIgnoreParentAlpha(true)
     self.lockBtn:SetScript("OnClick", function()
         self.db.locked = not self.db.locked
         self:Lock(self.db.locked)
@@ -449,20 +448,27 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
 end
 
 function AssistedCombatIconMixin:Start()
-    if self.isTicking then return end
+    if self.ticker then return end
 
-    self.isTicking = true
-    self:Tick()
+    self.ticker = C_Timer.NewTicker(self.updateInterval,function()
+        self:Tick()
+    end)
 end
 
 function AssistedCombatIconMixin:Stop()
-    self.isTicking = false
+    if not self.ticker then return end
+
+    self.ticker:Cancel()
+    self.ticker = nil
     self:SetShown(false)
 end
 
+function AssistedCombatIconMixin:IsTickerStalled()
+    return self.lastTickTime and (GetTime() - self.lastTickTime) > (self.updateInterval * 2)
+end
+
 function AssistedCombatIconMixin:Tick()
-    if not self.isTicking then return end
-    local interval = InCombatLockdown() and self.combatUpdateInterval or self.updateInterval
+    if not self.ticker then return end
 
     self:UpdateVisibility()
 
@@ -476,10 +482,7 @@ function AssistedCombatIconMixin:Tick()
     end
     
     self:Update()
-
-    C_Timer.After(interval, function()
-        self:Tick()
-    end)
+    self.lastTickTime = GetTime()
 end
 
 function AssistedCombatIconMixin:SetVisible(visibility)
@@ -494,8 +497,6 @@ end
 function AssistedCombatIconMixin:UpdateVisibility()
     local db = self.db
     local display = db.display
-
-    if not self.isTicking then self:SetShown(false) end
 
     if display.ALWAYS or not db.locked then
         self:SetVisible(true)
@@ -651,7 +652,9 @@ function AssistedCombatIconMixin:UpdateCooldown()
 end
 
 function AssistedCombatIconMixin:Reload()
+    self:Stop()
     LoadActionSlotMap()
+    self:Start()
 end
 
 function AssistedCombatIconMixin:Lock(lock)
@@ -693,6 +696,13 @@ function AssistedCombatIconMixin:Debug()
             print(spellInfo.name, spellID, "\n|cff4cc9f0 | Keybind:|r ", text, "\n|cff4cc9f0 | Action Slot:|r ", slot,"\n|cff4cc9f0 | Binding Action:|r ", action, "\n|cff4cc9f0 | Button Name:|r ", buttonName)
         end
     end
+
+    print("Addon Status", 
+        ("\n|cff4cc9f0 | Enabled:|r %s\n|cff4cc9f0 | Health:|r %s\n|cff4cc9f0 | Last Tick:|r %s\n|cff4cc9f0 | Current Time:|r %s"):format(
+        self.db.enabled and "Yes" or "No!", 
+        self:IsTickerStalled() and "BAD!!" or "Good!", 
+        string.format("%d", self.lastTickTime), 
+        string.format("%d", GetTime())))
 end
 
 function AssistedCombatIconMixin:DebugSlots(start, stop)
