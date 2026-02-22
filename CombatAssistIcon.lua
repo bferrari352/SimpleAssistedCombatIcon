@@ -7,16 +7,22 @@ local GetActionInfo     = GetActionInfo
 local GetBindingKey     = GetBindingKey
 local GetBindingText    = GetBindingText
 local InCombatLockdown  = InCombatLockdown
+local UnitCanAttack     = UnitCanAttack
+local UnitIsUnit        = UnitIsUnit
+local UnitInVehicle     = UnitInVehicle
+local UnitGroupRolesAssigned  = UnitGroupRolesAssigned
 local C_CVar            = C_CVar
 local C_Spell           = C_Spell
 local C_SpellBook       = C_SpellBook
 local C_ActionBar       = C_ActionBar
 local C_AssistedCombat  = C_AssistedCombat
+local C_NamePlate       = C_NamePlate
 local C_StringUtil      = C_StringUtil
 
 local LSM = LibStub("LibSharedMedia-3.0")
 local LKB = LibStub("LibKeyBound-CUSTOM")
 local ACR = LibStub("AceConfigRegistry-3.0")
+local ACD = LibStub("AceConfigDialog-3.0")
 local LAB = LibStub("LibActionButton-1.0", true)
 local Masque = LibStub("Masque",true)
 
@@ -484,6 +490,8 @@ function AssistedCombatIconMixin:OnLoad()
 
     self:RegisterEvent("UNIT_ENTERED_VEHICLE")
     self:RegisterEvent("UNIT_EXITED_VEHICLE")
+    self:RegisterEvent("NAME_PLATE_UNIT_ADDED")
+    self:RegisterEvent("NAME_PLATE_UNIT_REMOVED")
 
     self:RegisterEvent("MODIFIER_STATE_CHANGED")
     self:RegisterForDrag("LeftButton")
@@ -500,8 +508,11 @@ function AssistedCombatIconMixin:OnLoad()
     self.lockBtn:SetPushedTexture("Interface\\buttons\\lockbutton-unlocked-down")
     self.lockBtn:SetIgnoreParentAlpha(true)
     self.lockBtn:SetScript("OnClick", function()
-        self.db.locked = not self.db.locked
-        self:Lock(self.db.locked)
+        self:Lock(not self.db.locked)
+        if ACD.OpenFrames[addonName] then
+            ACR:NotifyChange(addonName)
+        end
+        
         DEFAULT_CHAT_FRAME:AddMessage(("|cff4cc9f0SACI|r: %s!"):format(self.db.locked and "Locked" or "Unlocked"))
     end)
 
@@ -563,9 +574,21 @@ function AssistedCombatIconMixin:OnEvent(event, ...)
     elseif event == "PLAYER_REGEN_DISABLED" and self.db.display.IN_COMBAT then
         self:UpdateVisibility()
         self:Update()
-    elseif event == "PLAYER_TARGET_CHANGED" and self.db.display.HOSTILE_TARGET then
-        self:UpdateVisibility()
-        self:Update()
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        if self.db.position.parentFrame == "__nameplate" then
+            self:UpdateAnchorPoint()
+            self:UpdateVisibility()
+            self:Update()
+        elseif self.db.display.HOSTILE_TARGET then
+            self:UpdateVisibility()
+            self:Update()
+        end
+    elseif event == "NAME_PLATE_UNIT_ADDED" or event == "NAME_PLATE_UNIT_REMOVED" then
+        if self.db.position.parentFrame == "__nameplate" and UnitIsUnit(..., "target") then
+            self:UpdateAnchorPoint()
+            self:UpdateVisibility()
+            self:Update()
+        end
     elseif (event == "GROUP_ROSTER_UPDATE" or event == "PLAYER_SPECIALIZATION_CHANGED" or event == "ROLE_CHANGED_INFORM") and self.db.display.HideAsHealer then
         self:UpdateVisibility()
         self:Update()
@@ -635,6 +658,12 @@ function AssistedCombatIconMixin:Tick()
     self.lastTickTime = GetTime()
 end
 
+function AssistedCombatIconMixin:OnUpdate()
+    if self.db.position.parentFrame ~= "__cursor" then return end
+
+    self:UpdateAnchorPoint()
+end
+
 function AssistedCombatIconMixin:SetVisible(visibility)
     if self.db.fadeOutHide then 
         self:SetAlpha(visibility and self.db.alpha or self.db.fadeOutAlpha)
@@ -647,8 +676,9 @@ end
 function AssistedCombatIconMixin:UpdateVisibility()
     local db = self.db
     local display = db.display
+    local nameplate = db.position.parentFrame == "__nameplate" and UnitCanAttack("player","target") and C_NamePlate.GetNamePlateForUnit("target")
 
-    if not db.enabled then 
+    if not db.enabled or db.position.parentFrame == "__nameplate" and not nameplate then 
         self:SetShown(false)
         return 
     end
@@ -668,7 +698,7 @@ function AssistedCombatIconMixin:UpdateVisibility()
         then
             self:SetVisible(false)
         else
-            self:SetVisible(true)
+            self:SetVisible(db.position.parentFrame ~= "__nameplate" or nameplate)
         end
     else
         local show =   (display.HOSTILE_TARGET and UnitCanAttack("player", "anyenemy"))
@@ -680,7 +710,8 @@ function AssistedCombatIconMixin:UpdateVisibility()
                     or (display.HideAsHealer and UnitGroupRolesAssigned("player") == "HEALER")
                     or (display.HideOnMount and IsMounted())
 
-        self:SetVisible(show and not hide)
+        self:SetVisible(show and not hide
+            and (db.position.parentFrame ~= "__nameplate" or nameplate))
     end
 end
 
@@ -723,12 +754,7 @@ function AssistedCombatIconMixin:ApplyOptions()
     self:SetSize(db.iconSize, db.iconSize)
     self:SetAlpha(db.alpha)
 
-    local parent = _G[db.position.parent]
-    self:SetParent(parent)
-    self:ClearAllPoints()
-    self:SetScale(UIParent:GetEffectiveScale()/parent:GetEffectiveScale())
-    self:SetPoint(db.position.point, db.position.parent, db.position.relativePoint, db.position.X, db.position.Y)
-
+    self:UpdateAnchorPoint()
     self:SetFrameStrata(frameStrata[db.position.strata])
     self:Raise()
 
@@ -784,6 +810,38 @@ function AssistedCombatIconMixin:ApplyOptions()
     self:Update()
 end
 
+function AssistedCombatIconMixin:UpdateAnchorPoint()
+    local db = self.db
+
+    local uiScale = UIParent:GetEffectiveScale()
+    local parent =_G[db.position.parent] or UIParent
+    local point = db.position.point
+    local relativePoint = db.position.relativePoint
+    local X = db.position.X / db.icon.scale
+    local Y = db.position.Y / db.icon.scale
+
+    if db.position.parentFrame == "__nameplate" then
+        local nameplate = C_NamePlate.GetNamePlateForUnit("target")
+        if nameplate and not nameplate:IsForbidden() and UnitCanAttack("player", "target") then
+            parent = nameplate
+        end
+    elseif db.position.parentFrame == "__cursor" then
+        local cursorX, cursorY = GetCursorPosition()
+
+        X = ((cursorX / uiScale) / db.icon.scale) + db.position.X
+        Y = ((cursorY / uiScale) / db.icon.scale) + db.position.Y
+
+        parent = UIParent
+        relativePoint = "BOTTOMLEFT"
+        self:EnableMouse(false)
+    end
+
+    self:ClearAllPoints()
+    self:SetParent(parent)
+    self:SetScale(db.icon.scale * (uiScale / parent:GetEffectiveScale()) or 1)
+    self:SetPoint(point, parent, relativePoint, X, Y)
+end
+
 function AssistedCombatIconMixin:UpdateCooldown()
     if not IsValidSpellID(self.spellID) or not self:IsShown() then return end
     local spellID = self.spellID
@@ -816,12 +874,22 @@ function AssistedCombatIconMixin:Reload()
 end
 
 function AssistedCombatIconMixin:Lock(lock)
+    if self.db.position.parentFrame ~= "UIParent" then
+        self:SetMovable(false)
+        self.db.locked = true
+        return
+    end
+    
+    self.db.locked = lock
     self.lockBtn:SetNormalTexture(lock and "Interface\\buttons\\lockbutton-locked-up" or "Interface\\buttons\\lockbutton-unlocked-up")
+    
+    self:SetMovable(not lock)
     self:EnableMouse(not lock)
 end
 
 function AssistedCombatIconMixin:OnDragStart()
-    if self.db.locked then return end
+    if self.db.locked or self.db.position.parentFrame ~= "UIParent" then return end
+
     self:StartMoving()
 end
 
@@ -829,20 +897,21 @@ function AssistedCombatIconMixin:OnDragStop()
     self:StopMovingOrSizing()
 
     local point, relativeTo, relativePoint, xOfs, yOfs = self:GetPoint()
-    local position = self.db.position
-    local strata = position.strata
-    local parent = position.parent
+    local strata = self.db.position.strata
 
     self.db.position = {
         strata = strata,
         point = point,
         parent = "UIParent",
+        parentFrame = "UIParent",
         relativePoint = relativePoint,
         X = math.floor(xOfs+0.5),
         Y = math.floor(yOfs+0.5),
     }
-
-    ACR:NotifyChange(addonName)
+    
+    if ACD.OpenFrames[addonName] then
+        ACR:NotifyChange(addonName)
+    end
 end
 
 function AssistedCombatIconMixin:Debug()
